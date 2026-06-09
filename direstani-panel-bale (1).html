@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>پنل مدیریت سفارش — دیرستانی</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Vazirmatn',sans-serif;background:#f7f7f5;color:#1a1a1a;direction:rtl;min-height:100vh}
+a{text-decoration:none}
+:root{--accent:#1a1a1a;--accent2:#f0a500;--bg:#f7f7f5;--surface:#ffffff;--border:#e8e8e4;--muted:#888;--radius:10px;--radius-lg:14px}
+
+/* layout */
+.layout{display:flex;min-height:100vh}
+.sidebar{width:170px;background:var(--surface);border-left:1px solid var(--border);padding:1rem 0.75rem;display:flex;flex-direction:column;gap:2px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto}
+.main{flex:1;padding:1rem;overflow:auto;min-width:0}
+
+/* sidebar */
+.brand{display:flex;align-items:center;gap:8px;padding:0.25rem 0.25rem 1rem;border-bottom:1px solid var(--border);margin-bottom:0.5rem}
+.brand-icon{width:30px;height:30px;background:#1a1a1a;color:#fff;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.brand-name{font-size:13px;font-weight:600;line-height:1.3}
+.brand-sub{font-size:10px;color:var(--muted)}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;font-size:12px;color:var(--muted);cursor:pointer;transition:all .15s;border:none;background:none;width:100%;text-align:right;font-family:'Vazirmatn',sans-serif}
+.nav-item:hover{background:#f3f3f0;color:#1a1a1a}
+.nav-item.active{background:#1a1a1a;color:#fff}
+.nav-icon{font-size:14px;width:18px;text-align:center;flex-shrink:0}
+
+/* topbar */
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px}
+.page-title{font-size:17px;font-weight:600}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:1rem}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:0.65rem 0.85rem;transition:border-color .2s}
+.stat-card:hover{border-color:#bbb}
+.stat-label{font-size:11px;color:var(--muted);margin-bottom:4px}
+.stat-val{font-size:20px;font-weight:600;line-height:1}
+.stat-sub{font-size:10px;color:var(--muted);margin-top:3px}
+.stat-card.accent{border-color:#f0a500}
+.stat-card.accent .stat-val{color:#b07800}
+
+/* search + filter bar */
+.toolbar{display:flex;gap:6px;margin-bottom:0.75rem;flex-wrap:wrap;align-items:center}
+.search-wrap{position:relative;flex:1;min-width:160px}
+.search-wrap input{width:100%;padding:6px 30px 6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;font-family:'Vazirmatn',sans-serif;background:var(--surface);color:#1a1a1a;outline:none;transition:border-color .15s}
+.search-wrap input:focus{border-color:#aaa}
+.search-icon{position:absolute;right:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:12px;pointer-events:none}
+.filter-pills{display:flex;gap:4px;flex-wrap:wrap}
+.pill{padding:4px 10px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;font-family:'Vazirmatn',sans-serif;background:var(--surface);color:var(--muted);transition:all .12s}
+.pill:hover{border-color:#aaa;color:#1a1a1a}
+.pill.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+
+/* orders table */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:540px}
+thead th{font-size:11px;color:var(--muted);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;background:#fafaf8}
+tbody tr{transition:background .1s;cursor:pointer}
+tbody tr:hover{background:#fafaf8}
+tbody tr:not(:last-child) td{border-bottom:1px solid var(--border)}
+td{padding:8px 10px;font-size:12px;vertical-align:middle}
+.order-num{font-weight:600;color:#555;font-size:11px}
+.customer-name{font-weight:500}
+.items-cell{color:var(--muted);font-size:11px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.price-cell{font-weight:500;white-space:nowrap}
+
+/* badges */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:500;white-space:nowrap}
+.badge-new{background:#EBF4FF;color:#1a56a0}
+.badge-processing{background:#FEF3C7;color:#92500a}
+.badge-done{background:#D1FAE5;color:#065f46}
+.badge-cancelled{background:#FEE2E2;color:#991b1b}
+
+/* action buttons */
+.btn{padding:4px 9px;border-radius:6px;border:1px solid var(--border);font-size:11px;cursor:pointer;font-family:'Vazirmatn',sans-serif;transition:all .12s;background:var(--surface);color:#333}
+.btn:hover{border-color:#aaa}
+.btn-deliver{border-color:#6ee7b7;background:#ecfdf5;color:#065f46}
+.btn-deliver:hover{background:#d1fae5}
+.btn-print{border-color:#e2e8f0;background:#f8fafc;color:#64748b}
+.btn-print:hover{background:#f1f5f9}
+.btn-primary{background:#1a1a1a;color:#fff;border-color:#1a1a1a;padding:7px 14px;font-size:12px}
+.btn-primary:hover{background:#333}
+.btn-danger{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
+.btn-danger:hover{background:#fecaca}
+.actions-cell{display:flex;gap:4px;flex-wrap:nowrap}
+
+/* empty */
+.empty{padding:3rem;text-align:center;color:var(--muted);font-size:14px}
+
+/* modal */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;align-items:center;justify-content:center;padding:1rem}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--border);width:100%;max-width:460px;max-height:90vh;overflow-y:auto;animation:fadeUp .2s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.modal-head{display:flex;justify-content:space-between;align-items:center;padding:1.2rem 1.4rem;border-bottom:1px solid var(--border)}
+.modal-title{font-size:16px;font-weight:600}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1;padding:2px 6px}
+.modal-body{padding:1.4rem}
+.detail-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f0f0ec;font-size:14px}
+.detail-row:last-child{border-bottom:none}
+.detail-label{color:var(--muted);flex-shrink:0}
+.detail-val{font-weight:500;text-align:left}
+.modal-foot{padding:1rem 1.4rem;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+select.status-select{padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-family:'Vazirmatn',sans-serif;font-size:13px;background:#fff;color:#1a1a1a;outline:none;width:100%;margin-top:.75rem}
+
+/* form overlay */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group.full{grid-column:1/-1}
+.form-group label{font-size:12px;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-family:'Vazirmatn',sans-serif;font-size:13px;background:#fff;color:#1a1a1a;outline:none;transition:border-color .15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#888}
+.form-group textarea{resize:vertical;min-height:70px}
+
+/* chart section */
+.chart-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1.5rem}
+.chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.chart-title{font-size:14px;font-weight:600}
+.chart-wrap{position:relative;height:220px}
+
+/* toast */
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 22px;border-radius:8px;font-size:13px;font-family:'Vazirmatn',sans-serif;opacity:0;pointer-events:none;transition:opacity .25s;z-index:1000;white-space:nowrap}
+.toast.show{opacity:1}
+
+/* page sections */
+.page{display:none}
+.page.active{display:block}
+
+/* mobile */
+.mobile-nav{display:none}
+@media(max-width:700px){
+  .layout{flex-direction:column}
+  .sidebar{display:none}
+  .mobile-nav{display:flex;gap:4px;overflow-x:auto;padding:0.6rem 0.75rem;background:var(--surface);border-bottom:1px solid var(--border);width:100%;flex-shrink:0}
+  .mobile-nav .nav-item{white-space:nowrap;padding:6px 11px;font-size:11px;flex-shrink:0}
+  .main{padding:0.75rem;width:100%}
+  .form-grid{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- mobile nav -->
+  <div class="mobile-nav">
+    <button class="nav-item active" onclick="showPage('orders',this)"><span class="nav-icon">📦</span> سفارش‌ها</button>
+    <button class="nav-item" onclick="showPage('new-order',this)"><span class="nav-icon">✏️</span> ثبت سفارش</button>
+    <button class="nav-item" onclick="showPage('chart',this)"><span class="nav-icon">📊</span> نمودار</button>
+  </div>
+  <!-- sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">🍔</div>
+      <div>
+        <div class="brand-name">دیرستانی</div>
+        <div class="brand-sub">فست‌فود</div>
+      </div>
+    </div>
+    <button class="nav-item active" onclick="showPage('orders',this)"><span class="nav-icon">📦</span> مدیریت سفارش‌ها</button>
+    <button class="nav-item" onclick="showPage('new-order',this)"><span class="nav-icon">✏️</span> ثبت سفارش جدید</button>
+    <button class="nav-item" onclick="showPage('chart',this)"><span class="nav-icon">📊</span> نمودار فروش</button>
+  </aside>
+
+  <main class="main">
+
+    <!-- ===== ORDERS PAGE ===== -->
+    <div class="page active" id="page-orders">
+      <div class="topbar">
+        <div class="page-title">سفارش‌ها</div>
+        <div class="topbar-actions">
+          <span style="font-size:11px;color:var(--muted)">بله: <b id="bale-status" style="color:#065f46">⏳ در حال اتصال</b></span>
+          <button class="btn" onclick="fetchBaleUpdates()" title="بروزرسانی دستی">🔄</button>
+          <button class="btn btn-primary" onclick="showPage('new-order', document.querySelector('.nav-item:nth-child(2)'))">+ سفارش جدید</button>
+        </div>
+      </div>
+
+      <!-- stats -->
+      <div class="stats">
+        <div class="stat-card accent">
+          <div class="stat-label">کل سفارش‌ها</div>
+          <div class="stat-val" id="st-total">0</div>
+          <div class="stat-sub">امروز</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">جدید</div>
+          <div class="stat-val" id="st-new">0</div>
+          <div class="stat-sub">در انتظار</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">در پردازش</div>
+          <div class="stat-val" id="st-proc">0</div>
+          <div class="stat-sub">آماده‌سازی</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">تحویل‌داده‌شده</div>
+          <div class="stat-val" id="st-done">0</div>
+          <div class="stat-sub">تکمیل‌شده</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">فروش امروز</div>
+          <div class="stat-val" id="st-rev">0</div>
+          <div class="stat-sub">تومان</div>
+        </div>
+      </div>
+
+      <!-- toolbar -->
+      <div class="toolbar">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" placeholder="جستجو در سفارش‌ها..." oninput="renderOrders()">
+        </div>
+        <div class="filter-pills">
+          <button class="pill active" onclick="setFilter('all',this)">همه</button>
+          <button class="pill" onclick="setFilter('new',this)">جدید</button>
+          <button class="pill" onclick="setFilter('processing',this)">پردازش</button>
+          <button class="pill" onclick="setFilter('done',this)">تحویل</button>
+          <button class="pill" onclick="setFilter('cancelled',this)">لغو</button>
+        </div>
+      </div>
+
+      <!-- table -->
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>شماره</th>
+                <th>مشتری</th>
+                <th>آیتم‌ها</th>
+                <th>مبلغ</th>
+                <th>وضعیت</th>
+                <th>زمان</th>
+                <th>اقدام</th>
+              </tr>
+            </thead>
+            <tbody id="orders-tbody"></tbody>
+          </table>
+          <div class="empty" id="empty-msg" style="display:none">سفارشی یافت نشد</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== NEW ORDER PAGE ===== -->
+    <div class="page" id="page-new-order">
+      <div class="topbar">
+        <div class="page-title">ثبت سفارش جدید</div>
+      </div>
+      <div class="card" style="padding:1.5rem;max-width:560px">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>نام مشتری *</label>
+            <input type="text" id="f-name" placeholder="مثلاً: علی رضایی">
+          </div>
+          <div class="form-group">
+            <label>شماره تلفن</label>
+            <input type="text" id="f-phone" placeholder="09xx-xxx-xxxx">
+          </div>
+          <div class="form-group full">
+            <label>آیتم‌های سفارش *</label>
+            <textarea id="f-items" placeholder="مثلاً: برگر دابل × ۲، سیب‌زمینی × ۱، نوشابه × ۲"></textarea>
+          </div>
+          <div class="form-group">
+            <label>مبلغ کل (تومان) *</label>
+            <input type="number" id="f-price" placeholder="مثلاً: 185000">
+          </div>
+          <div class="form-group">
+            <label>وضعیت اولیه</label>
+            <select id="f-status">
+              <option value="new">جدید</option>
+              <option value="processing">در حال پردازش</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label>توضیحات (اختیاری)</label>
+            <input type="text" id="f-note" placeholder="مثلاً: بدون پیاز، سس مخصوص">
+          </div>
+        </div>
+        <div style="margin-top:1.25rem;display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn" onclick="clearForm()">پاک کردن</button>
+          <button class="btn btn-primary" onclick="submitOrder()">ثبت سفارش</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== CHART PAGE ===== -->
+    <div class="page" id="page-chart">
+      <div class="topbar">
+        <div class="page-title">نمودار فروش</div>
+      </div>
+      <div class="chart-section">
+        <div class="chart-head">
+          <span class="chart-title">فروش ۷ روز گذشته (تومان)</span>
+        </div>
+        <div class="chart-wrap"><canvas id="sales-chart"></canvas></div>
+      </div>
+      <div class="chart-section">
+        <div class="chart-head">
+          <span class="chart-title">تعداد سفارش‌ها بر اساس وضعیت</span>
+        </div>
+        <div class="chart-wrap" style="height:200px"><canvas id="status-chart"></canvas></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- detail modal -->
+<div class="overlay" id="detail-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title" id="modal-title">جزئیات سفارش</span>
+      <button class="modal-close" onclick="closeModal('detail-modal')">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn btn-print" onclick="printFromModal()">🖨 چاپ فاکتور</button>
+      <button class="btn btn-deliver" id="modal-deliver-btn" onclick="deliverFromModal()">✓ تحویل داده شد</button>
+      <button class="btn btn-primary" onclick="saveModalStatus()">ذخیره</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== BALE CONFIG =====
+const BALE_TOKEN = '856895480:VVFO1pyzo9BFJbGlz2xfrqtp2coYsNi5Eho';
+const BALE_API   = `https://tapi.bale.ai/bot${BALE_TOKEN}`;
+let   baleOffset = 0;
+let   seenMsgIds = new Set();
+
+let orders = [];
+
+let activeFilter = 'all';
+let activeModalIdx = null;
+let counter = 100;
+
+function badgeClass(s){return{new:'badge-new',processing:'badge-processing',done:'badge-done',cancelled:'badge-cancelled'}[s]||'badge-new';}
+function badgeText(s){return{new:'جدید',processing:'در پردازش',done:'تحویل داده‌شده',cancelled:'لغو شده'}[s]||s;}
+function statusTextFull(s){return{new:'جدید',processing:'در حال پردازش',done:'تحویل داده شده',cancelled:'لغو شده'}[s]||s;}
+function fmtPrice(n){return Number(n).toLocaleString('fa-IR');}
+
+function setFilter(f, el){
+  activeFilter = f;
+  document.querySelectorAll('.filter-pills .pill').forEach(p=>p.classList.remove('active'));
+  if(el) el.classList.add('active');
+  renderOrders();
+}
+
+function renderOrders(){
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const filtered = orders.filter(o=>{
+    if(activeFilter !== 'all' && o.status !== activeFilter) return false;
+    if(q && !o.name.includes(q) && !o.id.includes(q) && !o.items.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const tbody = document.getElementById('orders-tbody');
+  const empty = document.getElementById('empty-msg');
+  if(!filtered.length){tbody.innerHTML='';empty.style.display='block';updateStats();return;}
+  empty.style.display='none';
+  tbody.innerHTML = filtered.map(o=>{
+    const ri = orders.indexOf(o);
+    const isDone = o.status==='done'||o.status==='cancelled';
+    const deliverBtn = !isDone
+      ? `<button class="btn btn-deliver" onclick="quickDeliver(${ri},event)">✓ تحویل</button>`
+      : '';
+    return `<tr onclick="openDetail(${ri})">
+      <td><span class="order-num">${o.id}</span></td>
+      <td><span class="customer-name">${o.name}</span></td>
+      <td><span class="items-cell" title="${o.items}">${o.items}</span></td>
+      <td class="price-cell">${fmtPrice(o.price)} ت</td>
+      <td><span class="badge ${badgeClass(o.status)}">${badgeText(o.status)}</span></td>
+      <td style="color:var(--muted);font-size:12px">${o.time}</td>
+      <td><div class="actions-cell" onclick="event.stopPropagation()">
+        ${deliverBtn}
+        <button class="btn btn-print" onclick="printInvoice(${ri},event)">🖨</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+  updateStats();
+}
+
+function updateStats(){
+  document.getElementById('st-total').textContent = orders.length;
+  document.getElementById('st-new').textContent = orders.filter(o=>o.status==='new').length;
+  document.getElementById('st-proc').textContent = orders.filter(o=>o.status==='processing').length;
+  document.getElementById('st-done').textContent = orders.filter(o=>o.status==='done').length;
+  const rev = orders.filter(o=>o.status==='done').reduce((a,o)=>a+Number(o.price),0);
+  document.getElementById('st-rev').textContent = fmtPrice(rev);
+}
+
+function quickDeliver(idx, e){
+  e.stopPropagation();
+  orders[idx].status = 'done';
+  showToast('✓ سفارش '+orders[idx].id+' تحویل داده شد');
+  renderOrders();
+  updateCharts();
+}
+
+function openDetail(idx){
+  activeModalIdx = idx;
+  const o = orders[idx];
+  document.getElementById('modal-title').textContent = 'سفارش ' + o.id;
+  const isDone = o.status==='done'||o.status==='cancelled';
+  document.getElementById('modal-deliver-btn').style.display = isDone ? 'none' : '';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="detail-row"><span class="detail-label">مشتری</span><span class="detail-val">${o.name}</span></div>
+    <div class="detail-row"><span class="detail-label">تلفن</span><span class="detail-val">${o.phone||'—'}</span></div>
+    <div class="detail-row"><span class="detail-label">آیتم‌ها</span><span class="detail-val" style="max-width:220px;text-align:left">${o.items}</span></div>
+    <div class="detail-row"><span class="detail-label">مبلغ</span><span class="detail-val">${fmtPrice(o.price)} تومان</span></div>
+    <div class="detail-row"><span class="detail-label">زمان ثبت</span><span class="detail-val">${o.time}</span></div>
+    ${o.note ? `<div class="detail-row"><span class="detail-label">توضیحات</span><span class="detail-val">${o.note}</span></div>` : ''}
+    <div class="detail-row"><span class="detail-label">وضعیت</span><span class="detail-val"><span class="badge ${badgeClass(o.status)}">${badgeText(o.status)}</span></span></div>
+    <select class="status-select" id="modal-status-sel">
+      <option value="new" ${o.status==='new'?'selected':''}>جدید</option>
+      <option value="processing" ${o.status==='processing'?'selected':''}>در حال پردازش</option>
+      <option value="done" ${o.status==='done'?'selected':''}>تحویل داده شده</option>
+      <option value="cancelled" ${o.status==='cancelled'?'selected':''}>لغو شده</option>
+    </select>`;
+  document.getElementById('detail-modal').classList.add('open');
+}
+
+function saveModalStatus(){
+  if(activeModalIdx===null) return;
+  orders[activeModalIdx].status = document.getElementById('modal-status-sel').value;
+  closeModal('detail-modal');
+  renderOrders();
+  updateCharts();
+  showToast('وضعیت سفارش بروزرسانی شد');
+}
+
+function deliverFromModal(){
+  if(activeModalIdx===null) return;
+  orders[activeModalIdx].status = 'done';
+  closeModal('detail-modal');
+  renderOrders();
+  updateCharts();
+  showToast('✓ سفارش تحویل داده شد');
+}
+
+function printFromModal(){
+  if(activeModalIdx===null) return;
+  printInvoice(activeModalIdx, {stopPropagation:()=>{}});
+}
+
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+function printInvoice(idx, e){
+  e.stopPropagation && e.stopPropagation();
+  const o = orders[idx];
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('fa-IR');
+  const timeStr = now.toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'});
+  const itemRows = o.items.split(/[،,]/).map(i=>`<tr><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px">${i.trim()}</td><td style="padding:7px 10px;border-bottom:1px solid #eee;text-align:left;color:#888;font-size:13px">—</td></tr>`).join('');
+  const win = window.open('','_blank','width=440,height=640');
+  if(!win) return;
+  win.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600&display=swap" rel="stylesheet">
+  <title>فاکتور ${o.id}</title>
+  <style>
+    body{font-family:'Vazirmatn',Tahoma,sans-serif;direction:rtl;padding:28px;color:#1a1a1a;max-width:380px;margin:0 auto;font-size:14px}
+    .logo{text-align:center;font-size:22px;font-weight:700;margin-bottom:4px}
+    .logo-sub{text-align:center;font-size:12px;color:#888;margin-bottom:18px}
+    hr{border:none;border-top:1px dashed #ccc;margin:12px 0}
+    .row{display:flex;justify-content:space-between;margin-bottom:7px;font-size:13px}
+    .lbl{color:#888}
+    table{width:100%;border-collapse:collapse;margin:10px 0}
+    th{background:#f5f5f2;padding:8px 10px;text-align:right;font-size:12px;border-bottom:2px solid #e0e0dc}
+    .total{font-size:16px;font-weight:600;text-align:center;padding:12px;border:1px dashed #bbb;border-radius:8px;margin:14px 0}
+    .footer{text-align:center;font-size:11px;color:#aaa;margin-top:16px}
+    .print-btn{display:block;width:100%;padding:10px;background:#1a1a1a;color:#fff;border:none;border-radius:7px;font-size:14px;font-family:'Vazirmatn',Tahoma,sans-serif;cursor:pointer;margin-top:14px}
+    @media print{.print-btn{display:none!important}}
+  </style></head><body>
+  <div class="logo">🍔 دیرستانی</div>
+  <div class="logo-sub">فست‌فود دیرستانی &mdash; خوشمزه از همیشه</div>
+  <hr>
+  <div class="row"><span class="lbl">شماره سفارش</span><b>${o.id}</b></div>
+  <div class="row"><span class="lbl">مشتری</span><span>${o.name}</span></div>
+  ${o.phone?`<div class="row"><span class="lbl">تلفن</span><span>${o.phone}</span></div>`:''}
+  <div class="row"><span class="lbl">تاریخ</span><span>${dateStr}</span></div>
+  <div class="row"><span class="lbl">ساعت ثبت</span><span>${o.time}</span></div>
+  <div class="row"><span class="lbl">وضعیت</span><span>${statusTextFull(o.status)}</span></div>
+  ${o.note?`<div class="row"><span class="lbl">توضیحات</span><span>${o.note}</span></div>`:''}
+  <hr>
+  <table><tr><th>آیتم</th><th style="text-align:left">جزئیات</th></tr>${itemRows}</table>
+  <hr>
+  <div class="total">جمع کل: ${fmtPrice(o.price)} تومان</div>
+  <div class="footer">با تشکر از انتخاب شما 🙏<br>چاپ شده در ${timeStr}</div>
+  <button class="print-btn" onclick="window.print()">🖨 چاپ فاکتور</button>
+  </body></html>`);
+  win.document.close();
+}
+
+function submitOrder(){
+  const name = document.getElementById('f-name').value.trim();
+  const items = document.getElementById('f-items').value.trim();
+  const price = document.getElementById('f-price').value.trim();
+  if(!name||!items||!price){showToast('لطفاً فیلدهای ستاره‌دار را پر کنید');return;}
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  orders.unshift({
+    id:'#'+counter++,
+    name,
+    phone: document.getElementById('f-phone').value.trim(),
+    items,
+    price: Number(price),
+    status: document.getElementById('f-status').value,
+    time: h+':'+m,
+    note: document.getElementById('f-note').value.trim()
+  });
+  clearForm();
+  showToast('✓ سفارش جدید ثبت شد');
+  renderOrders();
+  updateCharts();
+  showPage('orders', document.querySelectorAll('.nav-item')[0]);
+}
+
+function clearForm(){
+  ['f-name','f-phone','f-items','f-price','f-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-status').value='new';
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+function showPage(name, el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el) el.classList.add('active');
+  if(name==='chart') updateCharts();
+}
+
+let salesChart=null, statusChart=null;
+function updateCharts(){
+  const days=['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'];
+  const base=[1850000,2340000,1980000,2750000,3100000,2600000,0];
+  const todayRev = orders.filter(o=>o.status==='done').reduce((a,o)=>a+Number(o.price),0);
+  base[6] = todayRev||1450000;
+
+  if(salesChart) salesChart.destroy();
+  const ctx1 = document.getElementById('sales-chart').getContext('2d');
+  salesChart = new Chart(ctx1,{
+    type:'bar',
+    data:{labels:days,datasets:[{label:'فروش (تومان)',data:base,backgroundColor:'rgba(26,26,26,0.1)',borderColor:'rgba(26,26,26,0.7)',borderWidth:1.5,borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>fmtPrice(v)+'ت',font:{family:'Vazirmatn',size:11}},grid:{color:'rgba(0,0,0,0.05)'}},x:{ticks:{font:{family:'Vazirmatn',size:11}},grid:{display:false}}}}
+  });
+
+  if(statusChart) statusChart.destroy();
+  const ctx2 = document.getElementById('status-chart').getContext('2d');
+  statusChart = new Chart(ctx2,{
+    type:'doughnut',
+    data:{
+      labels:['جدید','در پردازش','تحویل','لغو'],
+      datasets:[{data:[
+        orders.filter(o=>o.status==='new').length,
+        orders.filter(o=>o.status==='processing').length,
+        orders.filter(o=>o.status==='done').length,
+        orders.filter(o=>o.status==='cancelled').length
+      ],backgroundColor:['#BFDBFE','#FDE68A','#A7F3D0','#FECACA'],borderColor:['#3B82F6','#F59E0B','#10B981','#EF4444'],borderWidth:1.5}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{family:'Vazirmatn',size:12},padding:14}}}}
+  });
+}
+
+// ===== PARSE BALE MESSAGE =====
+function parseBaleMessage(text, msgId, date) {
+  if (!text || !text.includes('سفارش جدید')) return null;
+
+  const lines = text.split('\n');
+
+  // پیدا کردن میز/الاچیق/بیرون‌بر
+  let location = '—';
+  for (const l of lines) {
+    if (l.includes('شماره میز')) { location = l.replace('نوع سفارش:', '').replace('🪑','').trim(); break; }
+    if (l.includes('الاچیق'))    { location = l.replace('نوع سفارش:', '').replace('🌿','').trim(); break; }
+    if (l.includes('بیرون‌بر'))  { location = 'بیرون‌بر 🛍️'; break; }
+  }
+
+  // آیتم‌ها
+  const itemLines = lines.filter(l => l.startsWith('•'));
+  const items = itemLines.map(l => {
+    const m = l.match(/•\s*(.+?)\s+x(\d+)/);
+    return m ? `${m[1]} × ${m[2]}` : l.replace('•','').trim();
+  }).join('، ');
+
+  // مبلغ
+  let price = 0;
+  const priceLine = lines.find(l => l.includes('مجموع:'));
+  if (priceLine) {
+    const pm = priceLine.match(/مجموع:\s*([\d۰-۹]+)/);
+    if (pm) price = parseInt(pm[1].replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))) * 1000;
+  }
+
+  // زمان
+  const d = date ? new Date(date * 1000) : new Date();
+  const timeStr = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+
+  return {
+    id: '#' + counter++,
+    _msgId: msgId,
+    name: location,
+    phone: '',
+    items: items || '—',
+    price,
+    status: 'new',
+    time: timeStr,
+    note: ''
+  };
+}
+
+// ===== FETCH FROM BALE =====
+function fetchBaleUpdates() {
+  const statusEl = document.getElementById('bale-status');
+  const cbName = '_bale_upd_' + Date.now();
+  const url = BALE_API + '/getUpdates?offset=' + baleOffset + '&limit=50&callback=' + cbName;
+
+  window[cbName] = function(data) {
+    delete window[cbName];
+    if (s && s.parentNode) s.parentNode.removeChild(s);
+
+    if (!data || !data.ok) {
+      if (statusEl) { statusEl.textContent = '🔴 خطا در اتصال'; statusEl.style.color = '#991b1b'; }
+      return;
+    }
+
+    let newCount = 0;
+    for (const upd of data.result) {
+      baleOffset = upd.update_id + 1;
+      const msg = upd.message || upd.channel_post;
+      if (!msg || !msg.text) continue;
+      if (seenMsgIds.has(msg.message_id)) continue;
+      seenMsgIds.add(msg.message_id);
+
+      const order = parseBaleMessage(msg.text, msg.message_id, msg.date);
+      if (order) {
+        orders.unshift(order);
+        newCount++;
+      }
+    }
+
+    if (newCount > 0) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.4);
+      } catch(_) {}
+
+      showToast('🔔 ' + newCount + ' سفارش جدید از مشتری!');
+      renderOrders();
+      updateCharts();
+    }
+
+    if (statusEl) {
+      const now = new Date();
+      const t = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+      statusEl.textContent = '🟢 متصل — ' + t;
+      statusEl.style.color = '#065f46';
+    }
+  };
+
+  const s = document.createElement('script');
+  s.src = url;
+  s.onerror = function() {
+    delete window[cbName];
+    if (statusEl) { statusEl.textContent = '🔴 خطا در اتصال'; statusEl.style.color = '#991b1b'; }
+  };
+  document.head.appendChild(s);
+}
+
+// هر ۵ ثانیه poll بزن
+fetchBaleUpdates();
+setInterval(fetchBaleUpdates, 5000);
+
+renderOrders();
+</script>
+</body>
+</html>
