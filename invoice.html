@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700&display=swap" rel="stylesheet">
+<title>فاکتور سفارش</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Vazirmatn', Tahoma, sans-serif;
+    direction: rtl;
+    background: #f5f5f0;
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+  .invoice {
+    background: #fff;
+    max-width: 400px;
+    width: 100%;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+    padding: 28px 24px 24px;
+  }
+  .logo { text-align: center; font-size: 26px; font-weight: 700; margin-bottom: 2px; }
+  .logo-sub { text-align: center; font-size: 12px; color: #999; margin-bottom: 20px; }
+  .badge {
+    display: block;
+    text-align: center;
+    background: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px;
+    margin-bottom: 18px;
+  }
+  hr { border: none; border-top: 1px dashed #e0e0d8; margin: 14px 0; }
+  .row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; }
+  .lbl { color: #999; }
+  .val { font-weight: 600; color: #1a1a1a; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  th {
+    background: #f8f8f4;
+    padding: 8px 10px;
+    text-align: right;
+    font-size: 12px;
+    color: #666;
+    border-bottom: 2px solid #eee;
+  }
+  td { padding: 8px 10px; border-bottom: 1px solid #f0f0ec; font-size: 13px; }
+  td.price { text-align: left; color: #888; }
+  .total {
+    font-size: 17px;
+    font-weight: 700;
+    text-align: center;
+    padding: 13px;
+    border: 1.5px dashed #d4d4cc;
+    border-radius: 10px;
+    margin: 14px 0;
+    color: #1a1a1a;
+  }
+  .footer { text-align: center; font-size: 11px; color: #bbb; margin-top: 14px; line-height: 1.8; }
+  .print-btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    background: #1a1a1a;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: 'Vazirmatn', Tahoma, sans-serif;
+    cursor: pointer;
+    margin-top: 16px;
+    font-weight: 600;
+  }
+  .print-btn:hover { background: #333; }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .invoice { box-shadow: none; border-radius: 0; }
+    .print-btn { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="invoice">
+  <div class="logo">🍔 دیرستانی</div>
+  <div class="logo-sub">فست‌فود دیرستانی — خوشمزه از همیشه</div>
+  <span class="badge">✅ سفارش ثبت شد</span>
+
+  <div class="row"><span class="lbl">شماره سفارش</span><span class="val" id="order-id">—</span></div>
+  <div class="row"><span class="lbl">موقعیت</span><span class="val" id="order-loc">—</span></div>
+  <div class="row"><span class="lbl">تاریخ</span><span class="val" id="order-date">—</span></div>
+  <div class="row"><span class="lbl">ساعت</span><span class="val" id="order-time">—</span></div>
+
+  <hr>
+
+  <table>
+    <tr><th>آیتم</th><th style="text-align:left">قیمت</th></tr>
+    <tbody id="items-body"></tbody>
+  </table>
+
+  <hr>
+
+  <div class="total" id="order-total">جمع کل: —</div>
+
+  <div class="footer">با تشکر از انتخاب شما 🙏<br>فست‌فود دیرستانی</div>
+  <button class="print-btn" onclick="window.print()">🖨 چاپ فاکتور</button>
+</div>
+
+<script>
+  const p = new URLSearchParams(window.location.search);
+
+  document.getElementById('order-id').textContent = p.get('id') || '—';
+  document.getElementById('order-loc').textContent = decodeURIComponent(p.get('loc') || '—');
+  document.getElementById('order-total').textContent = 'جمع کل: ' + (p.get('total') || '—') + ' هزار تومان';
+
+  // تاریخ و ساعت
+  const now = new Date();
+  document.getElementById('order-date').textContent = now.toLocaleDateString('fa-IR');
+  document.getElementById('order-time').textContent = now.toLocaleTimeString('fa-IR', {hour:'2-digit', minute:'2-digit'});
+
+  // آیتم‌ها
+  const itemsRaw = decodeURIComponent(p.get('items') || '');
+  const tbody = document.getElementById('items-body');
+  if (itemsRaw) {
+    itemsRaw.split('|').forEach(item => {
+      // فرمت: نام__تعداد__قیمت
+      const parts = item.split('__');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${parts[0] || item}</td><td class="price">${parts[2] ? parts[2] + ' هزار' : '—'}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+</script>
+</body>
+</html>
