@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>تست</title></head>
+<body style="font-family:sans-serif;padding:20px;direction:rtl">
+<h2 id="s">در حال تست...</h2>
+<pre id="r"></pre>
+<script>
+const proxy = 'https://bale-proxy.amirpocox313854375.workers.dev';
+const token = '856895480:VVFO1pyzo9BFJbGlz2xfrqtp2coYsNi5Eho';
+const url = proxy + '/bot' + token + '/getUpdates?limit=5';
+
+document.getElementById('s').textContent = 'در حال اتصال به: ' + url;
+
+fetch(url)
+  .then(r => {
+    document.getElementById('s').textContent = 'HTTP status: ' + r.status;
+    return r.text();
+  })
+  .then(t => {
+    document.getElementById('s').textContent = '✅ جواب گرفت';
+    document.getElementById('r').textContent = t;
+  })
+  .catch(e => {
+    document.getElementById('s').textContent = '❌ خطا: ' + e.message;
+  });
+</script>
+</body>
+</html>
