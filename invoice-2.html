@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>فاکتور دیرستانی</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: Tahoma, sans-serif;
+  background: #f0f0f0;
+  display: flex;
+  justify-content: center;
+  padding: 20px 10px;
+  direction: rtl;
+}
+.receipt {
+  background: #fff;
+  width: 100%;
+  max-width: 320px;
+  padding: 16px 14px;
+  font-size: 13px;
+}
+.top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+.box {
+  border: 1.5px solid #000;
+  padding: 4px 10px;
+  text-align: center;
+  min-width: 80px;
+}
+.box-label { font-size: 11px; }
+.box-val { font-size: 18px; font-weight: bold; }
+.shop-name {
+  text-align: center;
+  font-size: 16px;
+  font-weight: bold;
+  padding: 0 8px;
+  align-self: center;
+}
+.date-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #000;
+}
+.meta-row {
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+}
+thead tr {
+  background: #333;
+  color: #fff;
+}
+th, td {
+  padding: 5px 6px;
+  font-size: 12px;
+}
+th { text-align: center; }
+td { text-align: center; }
+td:first-child { text-align: right; }
+tr:not(:last-child) td { border-bottom: 1px solid #eee; }
+.sum-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 13px;
+  border-top: 1px solid #000;
+}
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  background: #333;
+  color: #fff;
+  padding: 7px 6px;
+  font-size: 14px;
+  font-weight: bold;
+  margin-top: 4px;
+}
+.footer {
+  border-top: 1px solid #000;
+  margin-top: 10px;
+  padding-top: 8px;
+  font-size: 12px;
+}
+.footer-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.print-btn {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background: #333;
+  color: #fff;
+  border: none;
+  font-family: Tahoma, sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 14px;
+  border-radius: 6px;
+}
+@media print {
+  body { background: #fff; padding: 0; }
+  .print-btn { display: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="receipt">
+
+  <div class="top-row">
+    <div class="box">
+      <div class="box-label">شماره فاکتور</div>
+      <div class="box-val" id="inv-id">—</div>
+    </div>
+    <div class="shop-name">دیرستانی</div>
+    <div class="box">
+      <div class="box-label">شماره میز</div>
+      <div class="box-val" id="inv-table">—</div>
+    </div>
+  </div>
+
+  <div class="date-row">
+    <span id="inv-date">—</span>
+    <span id="inv-time">—</span>
+  </div>
+
+  <div class="meta-row" id="inv-loc"></div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>عنوان</th>
+        <th>فی</th>
+        <th>تعداد</th>
+        <th>قیمت کل</th>
+      </tr>
+    </thead>
+    <tbody id="inv-items"></tbody>
+  </table>
+
+  <div class="sum-row">
+    <span>جمع کل :</span>
+    <span id="inv-sum">—</span>
+  </div>
+
+  <div class="total-row">
+    <span>قابل پرداخت :</span>
+    <span id="inv-total">—</span>
+  </div>
+
+  <div class="footer">
+    <div class="footer-row"><span>صندوقدار :</span><span>مدیر</span></div>
+    <div class="footer-row"><span>تلفن :</span><span>—</span></div>
+  </div>
+
+  <button class="print-btn" onclick="window.print()">🖨 چاپ فاکتور</button>
+</div>
+
+<script>
+const p = new URLSearchParams(window.location.search);
+
+// شماره فاکتور
+document.getElementById('inv-id').textContent = p.get('id') || '—';
+
+// شماره میز — از loc استخراج میکنیم
+const loc = decodeURIComponent(p.get('loc') || '');
+const tableMatch = loc.match(/(\d+)/);
+document.getElementById('inv-table').textContent = tableMatch ? tableMatch[1] : '—';
+if (loc) document.getElementById('inv-loc').textContent = '📍 ' + loc;
+
+// تاریخ و ساعت
+const now = new Date();
+document.getElementById('inv-date').textContent = now.toLocaleDateString('fa-IR');
+document.getElementById('inv-time').textContent = now.toLocaleTimeString('fa-IR', {hour:'2-digit', minute:'2-digit'});
+
+// آیتم‌ها
+const itemsRaw = decodeURIComponent(p.get('items') || '');
+const tbody = document.getElementById('inv-items');
+let grandTotal = 0;
+
+if (itemsRaw) {
+  itemsRaw.split('|').forEach(item => {
+    const parts = item.split('__');
+    const name = parts[0] || item;
+    const qty = parseInt(parts[1]) || 1;
+    const totalPrice = parseInt(parts[2]) || 0;
+    const unitPrice = qty > 0 ? Math.round(totalPrice / qty) * 10 : totalPrice * 10;
+    grandTotal += totalPrice * 10;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${name}</td>
+      <td>${unitPrice.toLocaleString()}</td>
+      <td>${qty}</td>
+      <td>${totalPrice.toLocaleString()}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// جمع کل
+const total = p.get('total') ? parseInt(p.get('total')) * 10000 : grandTotal * 10000;
+const formatted = total.toLocaleString() + ' ریال';
+document.getElementById('inv-sum').textContent = formatted;
+document.getElementById('inv-total').textContent = formatted;
+</script>
+</body>
+</html>
